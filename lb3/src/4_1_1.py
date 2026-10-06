@@ -1,6 +1,5 @@
 def edit_distance_with_variant(costs, str_a, str_b):
-    n_val = len(str_a)
-    m_val = len(str_b)
+    n_val, m_val = len(str_a), len(str_b)
     
     cost_replace = costs[0]
     cost_insert = costs[1]
@@ -19,7 +18,6 @@ def create_dp_table(n_val, m_val, str_a, str_b, cost_replace, cost_insert, cost_
     init_first_col(dp_table, n_val, cost_delete)
     fill_dp_table(dp_table, n_val, m_val, str_a, str_b,
                   cost_replace, cost_insert, cost_delete, cost_delete_two)
-    
     return dp_table
 
 
@@ -43,16 +41,12 @@ def fill_dp_table(dp_table, n_val, m_val, str_a, str_b, cost_replace, cost_inser
 def compute_cell(dp_table, i_idx, j_idx, str_a, str_b, cost_replace, cost_insert, cost_delete, cost_delete_two):
     replace_cost = get_replace_cost(str_a, i_idx, str_b, j_idx, cost_replace)
     
-    dp_table[i_idx][j_idx] = dp_table[i_idx - 1][j_idx - 1] + replace_cost
-    dp_table[i_idx][j_idx] = min(dp_table[i_idx][j_idx], 
-                                 dp_table[i_idx][j_idx - 1] + cost_insert)
-    dp_table[i_idx][j_idx] = min(dp_table[i_idx][j_idx], 
-                                 dp_table[i_idx - 1][j_idx] + cost_delete)
-    
-    if i_idx >= 2 and str_a[i_idx - 1] != str_a[i_idx - 2]:
-        two_del_cost = dp_table[i_idx - 2][j_idx] + cost_delete_two
-        dp_table[i_idx][j_idx] = min(dp_table[i_idx][j_idx], two_del_cost)
-
+    dp_table[i_idx][j_idx] = min(
+        dp_table[i_idx - 1][j_idx - 1] + replace_cost,
+        dp_table[i_idx][j_idx - 1] + cost_insert,
+        dp_table[i_idx - 1][j_idx] + cost_delete,
+        (dp_table[i_idx - 2][j_idx] + cost_delete_two) if (i_idx >= 2 and str_a[i_idx - 1] != str_a[i_idx - 2]) else float('inf')
+    )
 
 def get_replace_cost(str_a, i_idx, str_b, j_idx, cost_replace):
     if str_a[i_idx - 1] == str_b[j_idx - 1]:
@@ -62,6 +56,7 @@ def get_replace_cost(str_a, i_idx, str_b, j_idx, cost_replace):
 
 def main():
     costs_list = list(map(int, input().split()))
+    
     if len(costs_list) == 3:
         cost_replace_val = costs_list[0]
         cost_insert_val = costs_list[1]

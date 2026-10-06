@@ -1,6 +1,5 @@
 def edit_distance_with_operations(costs, str_a, str_b):
-    n_val = len(str_a)
-    m_val = len(str_b)
+    n_val, m_val = len(str_a), len(str_b)
     
     cost_replace = costs[0]
     cost_insert = costs[1]
@@ -55,8 +54,7 @@ def restore_operations(dp_table, str_a, str_b, cost_replace, cost_insert, cost_d
             if i_idx >= 2 and str_a[i_idx - 1] != str_a[i_idx - 2]:
                 two_del_cost = dp_table[i_idx - 2][j_idx] + cost_delete_two
                 if dp_table[i_idx][j_idx] == two_del_cost:
-                    operations.append('D')
-                    operations.append('D')
+                    operations.append('2D')
                     i_idx -= 2
                     continue
             
@@ -68,8 +66,7 @@ def restore_operations(dp_table, str_a, str_b, cost_replace, cost_insert, cost_d
             if i_idx >= 2 and str_a[i_idx - 1] != str_a[i_idx - 2]:
                 two_del_cost = dp_table[i_idx - 2][j_idx] + cost_delete_two
                 if current_cost == two_del_cost:
-                    operations.append('D')
-                    operations.append('D')
+                    operations.append('2D')
                     i_idx -= 2
                     continue
             
