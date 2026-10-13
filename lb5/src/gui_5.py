@@ -19,7 +19,8 @@ class AhoCorasick:
         self.patterns = []
         self.node_count = 1
         self.root.id = 0
-        
+        self.nodes_by_id = {0: self.root}  # Добавляем словарь для быстрого доступа
+    
     def add_pattern(self, pattern, pattern_num):
         node = self.root
         for char in pattern:
@@ -27,6 +28,7 @@ class AhoCorasick:
                 new_node = Node()
                 new_node.depth = node.depth + 1
                 new_node.id = self.node_count
+                self.nodes_by_id[self.node_count] = new_node  # Сохраняем узел
                 self.node_count += 1
                 node.children[char] = new_node
             node = node.children[char]
@@ -424,131 +426,119 @@ class KmpApp(ctk.CTk):
         if not self.automaton:
             messagebox.showwarning("Предупреждение", "Сначала постройте автомат!")
             return
-        
         self.canvas.delete("all")
         
         node_radius = 25
-        x_start = 80
-        y_start = 60
-        x_step = 140
-        y_step = 120
+        canvas_width = 900
+        canvas_height = 600
         
         levels = {}
         queue = deque([(self.automaton.root, 0)])
         visited = set()
         
         while queue:
-            node, x_pos = queue.popleft()
+            node, depth = queue.popleft()
             if node.id in visited:
                 continue
             visited.add(node.id)
             
-            depth = node.depth
             if depth not in levels:
                 levels[depth] = []
-            levels[depth].append((node, x_pos))
+            levels[depth].append(node)
             
             for char, child in node.children.items():
                 if child.id not in visited:
-                    queue.append((child, x_pos + x_step))
+                    queue.append((child, depth + 1))
         
         node_positions = {}
         
         for depth in sorted(levels.keys()):
             nodes_at_level = levels[depth]
-            y_pos = y_start + depth * y_step
+            num_nodes = len(nodes_at_level)
+            y_pos = 60 + depth * 120
             
-            for i, (node, x_pos) in enumerate(nodes_at_level):
-                x_center = x_start + x_pos
-                y_center = y_pos
-                
-                node_positions[node.id] = (x_center, y_center)
-                
-                fill_color = "lightblue" if node.patterns else "white"
-                outline_color = "red" if node.patterns else "black"
-                outline_width = 3 if node.patterns else 2
-                
-                self.canvas.create_oval(
-                    x_center - node_radius, y_center - node_radius,
-                    x_center + node_radius, y_center + node_radius,
-                    fill=fill_color, outline=outline_color, width=outline_width
-                )
-                
-                self.canvas.create_text(
-                    x_center, y_center - 8,
-                    text=str(node.id), font=("Arial", 12, "bold")
-                )
-                
-                if node.patterns:
-                    patterns_text = f"P{node.patterns}"
-                    self.canvas.create_text(
-                        x_center, y_center + 10,
-                        text=patterns_text, font=("Arial", 9), fill="red"
-                    )
+            if num_nodes == 1:
+                x_positions = [canvas_width // 2]
+            else:
+                spacing = canvas_width // (num_nodes + 1)
+                x_positions = [spacing * (i + 1) for i in range(num_nodes)]
+            
+            for i, node in enumerate(nodes_at_level):
+                node_positions[node.id] = (x_positions[i], y_pos)
         
-        visited_edges = set()
         queue = deque([self.automaton.root])
         visited_nodes = {self.automaton.root.id}
         
         while queue:
             node = queue.popleft()
-            
+            if node.suffix_link and node.id != node.suffix_link.id:
+                if node.id in node_positions and node.suffix_link.id in node_positions:
+                    x1, y1 = node_positions[node.id]
+                    x2, y2 = node_positions[node.suffix_link.id]
+                    self.canvas.create_line(
+                        x1, y1, x2, y2,
+                        dash=(5, 3), fill="red", width=2
+                    )
+            for child in node.children.values():
+                if child.id not in visited_nodes:
+                    visited_nodes.add(child.id)
+                    queue.append(child)
+        
+        queue = deque([self.automaton.root])
+        visited_nodes = {self.automaton.root.id}
+        
+        while queue:
+            node = queue.popleft()
             if node.id in node_positions:
                 x1, y1 = node_positions[node.id]
-                
                 for char, child in node.children.items():
                     if child.id in node_positions:
                         x2, y2 = node_positions[child.id]
-                        
                         self.canvas.create_line(
                             x1, y1, x2, y2,
                             arrow=tk.LAST, fill="black", width=2
                         )
-                        
                         mid_x = (x1 + x2) / 2
                         mid_y = (y1 + y2) / 2
                         self.canvas.create_text(
                             mid_x, mid_y - 12,
                             text=char, font=("Arial", 10, "bold"), fill="blue"
                         )
-                    
                     if child.id not in visited_nodes:
                         visited_nodes.add(child.id)
                         queue.append(child)
         
-        queue = deque([self.automaton.root])
-        visited_nodes = {self.automaton.root.id}
-        
-        while queue:
-            node = queue.popleft()
+        for node_id, (x_center, y_center) in node_positions.items():
+            node = self.automaton.nodes_by_id[node_id]
             
-            if node.suffix_link and node.id != node.suffix_link.id:
-                if node.id in node_positions and node.suffix_link.id in node_positions:
-                    x1, y1 = node_positions[node.id]
-                    x2, y2 = node_positions[node.suffix_link.id]
-                    
-                    self.canvas.create_line(
-                        x1, y1, x2, y2,
-                        dash=(5, 3), fill="red", width=2
-                    )
+            fill_color = "lightblue" if node.patterns else "white"
+            outline_color = "red" if node.patterns else "black"
+            outline_width = 3 if node.patterns else 2
             
-            for child in node.children.values():
-                if child.id not in visited_nodes:
-                    visited_nodes.add(child.id)
-                    queue.append(child)
+            self.canvas.create_oval(
+                x_center - node_radius, y_center - node_radius,
+                x_center + node_radius, y_center + node_radius,
+                fill=fill_color, outline=outline_color, width=outline_width
+            )
+            self.canvas.create_text(
+                x_center, y_center - 8,
+                text=str(node.id), font=("Arial", 12, "bold")
+            )
+            if node.patterns:
+                patterns_text = f"P{node.patterns}"
+                self.canvas.create_text(
+                    x_center, y_center + 10,
+                    text=patterns_text, font=("Arial", 9), fill="red"
+                )
         
-        legend_y = 650
+        legend_y = 550
         self.canvas.create_text(80, legend_y, text="Легенда:", font=("Arial", 14, "bold"), anchor="w")
-        
         self.canvas.create_oval(80, legend_y + 15, 105, legend_y + 40, fill="lightblue", outline="red", width=2)
         self.canvas.create_text(250, legend_y + 27, text="- вершина с паттерном", anchor="w", font=("Arial", 11))
-        
         self.canvas.create_line(80, legend_y + 55, 105, legend_y + 55, fill="black", width=2, arrow=tk.LAST)
         self.canvas.create_text(250, legend_y + 55, text="- переход бора", anchor="w", font=("Arial", 11))
-        
         self.canvas.create_line(80, legend_y + 80, 105, legend_y + 80, dash=(5, 3), fill="red", width=2)
         self.canvas.create_text(250, legend_y + 80, text="- суффиксная ссылка", anchor="w", font=("Arial", 11))
-
 
 if __name__ == "__main__":
     app = KmpApp()
