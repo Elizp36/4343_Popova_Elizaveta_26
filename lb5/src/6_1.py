@@ -10,8 +10,8 @@ class Node:
 
 class AhoCorasick:
     def __init__(self):
-        self.root = Node() # Главная вершина (пустая)
-        self.patterns = [] # Список строк-паттернов
+        self.root = Node() #главная вершина (пустая)
+        self.patterns = [] #список строк-паттернов
         
     def add_pattern(self, pattern, pattern_num):
         node = self.root
